@@ -57,15 +57,18 @@ func (lists Lists) Get() map[string]bool {
 					list.Type == Domains && strings.Contains(line, " "):
 					continue
 				default:
-					if _, ok := dns.IsDomainName(line); !ok {
-						continue
-					}
 					if list.Type == Hosts {
 						if strings.HasPrefix(line, "0.0.0.0") || strings.HasPrefix(line, "127.0.0.1") {
-							line = strings.Split(line, " ")[1]
+							switch line = strings.Split(line, " ")[1]; line {
+							case "localhost", "localhost.localdomain":
+								continue
+							}
 						} else {
 							continue
 						}
+					}
+					if _, ok := dns.IsDomainName(line); !ok {
+						continue
 					}
 				}
 				res[line] = true
