@@ -50,28 +50,33 @@ func (lists Lists) Get() map[string]bool {
 			var entries int
 			scanner := bufio.NewScanner(resp.Body)
 			for scanner.Scan() {
-				line := strings.TrimSpace(strings.ToLower(scanner.Text()))
-				switch {
-				case line == "",
-					strings.HasPrefix(line, "#"),
-					list.Type == Domains && strings.Contains(line, " "):
+				var domain string
+				line := normalizeEntry(scanner.Text())
+				if line == "" {
 					continue
-				default:
-					if list.Type == Hosts {
-						if strings.HasPrefix(line, "0.0.0.0") || strings.HasPrefix(line, "127.0.0.1") {
-							switch line = strings.Split(line, " ")[1]; line {
-							case "localhost", "localhost.localdomain":
-								continue
-							}
-						} else {
+				}
+				switch list.Type {
+				case Hosts:
+					if !strings.HasPrefix(line, "0.0.0.0") && !strings.HasPrefix(line, "127.0.0.1") {
+						continue
+					}
+					var found bool
+					if _, domain, found = strings.Cut(line, " "); found {
+						switch domain {
+						case "localhost", "localhost.localdomain", "local", "":
 							continue
 						}
 					}
-					if _, ok := dns.IsDomainName(line); !ok {
+				case Domains:
+					if strings.Contains(line, " ") {
 						continue
 					}
+					domain = line
 				}
-				res[line] = true
+				if _, ok := dns.IsDomainName(domain); !ok {
+					continue
+				}
+				res[domain] = true
 				entries++
 			}
 			if err := scanner.Err(); err != nil {
@@ -81,4 +86,9 @@ func (lists Lists) Get() map[string]bool {
 		}
 	}
 	return res
+}
+
+func normalizeEntry(line string) string {
+	line, _, _ = strings.Cut(line, "#")
+	return strings.TrimSpace(strings.ToLower(strings.ReplaceAll(line, "\t", " ")))
 }
