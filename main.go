@@ -62,6 +62,9 @@ func main() {
 
 	blocked := conf.DenyLists.Get()
 	noBlocked := len(blocked)
+	if len(conf.DenyLists) > 0 && noBlocked == 0 {
+		log.Fatal("Failed to retrieve block lists' entries.")
+	}
 	log.Printf("Found %d hosts in block lists.\n", noBlocked)
 	for host := range allowed {
 		delete(blocked, host)
